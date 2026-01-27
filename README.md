@@ -1,4 +1,4 @@
-# <div align = "center">Matrix Decompositions</div
+# <div align = "center">Matrix Decompositions</div>
 
 A matrix decomposition (or factorization) is the process of breaking down a
 given matrix into a product of two or more simpler matrices.
