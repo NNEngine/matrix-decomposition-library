@@ -1,0 +1,9 @@
+- size_t stores size in bytes.
+- In switch case: case must be a compile-time constant expression.
+
+```
+sizeof(int8_t)   == sizeof(uint8_t)   == 1
+sizeof(int16_t)  == sizeof(uint16_t)  == 2
+sizeof(int32_t)  == sizeof(uint32_t)  == sizeof(float)  == 4
+sizeof(int64_t)  == sizeof(uint64_t)  == sizeof(double) == 8
+```

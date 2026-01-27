@@ -1,0 +1,319 @@
+/* utils.c */
+
+#include "../includes/libs.h"
+#include "../includes/utils.h"
+
+static size_t get_type_size(enum DataType type){
+
+	/* get size of the datatype*/
+
+	switch(type){
+
+	case TYPE_INT8:
+		return sizeof(int8_t);
+
+	case TYPE_INT16:
+		return sizeof(int16_t);
+
+	case TYPE_INT32:
+		return sizeof(int32_t);
+
+	case TYPE_INT64:
+		return sizeof(int64_t);
+
+	case TYPE_UINT8:
+		return sizeof(uint8_t);
+
+	case TYPE_UINT16:
+		return sizeof(uint16_t);
+
+	case TYPE_UINT32:
+		return sizeof(uint32_t);
+
+	case TYPE_UINT64:
+		return sizeof(uint64_t);
+
+	default:
+		return 0;
+
+	}
+}
+
+static enum DataType get_size_type(size_t size){
+	/* get datatype from the size*/
+
+	switch(size){
+		case sizeof(int8_t): return TYPE_INT8;
+		case sizeof(int16_t): return TYPE_INT16;
+		case sizeof(int32_t): return TYPE_INT32;
+		case sizeof(int64_t): return TYPE_INT64;
+
+		case sizeof(uint8_t) : return TYPE_UINT8;
+		case sizeof(uint16_t) : return TYPE_UINT16;
+		case sizeof(uint32_t) : return TYPE_UINT32;
+		case sizeof(uint64_t) : return TYPE_UINT64;
+
+		case sizeof(float): return TYPE_FLOAT;
+		case sizeof(double): return TYPE_DOUBLE;
+
+		default: return -1; // unknown datatype
+
+	}
+}
+
+struct Matrix *matrix(int rows, int cols, enum DataType type){
+	if(rows <=0 || cols <= 0){
+		return NULL;
+	}
+
+	size_t element_size = get_type_size(type);
+
+	if(element_size == 0){
+		return NULL;
+	}
+
+	/* Overflow protection */
+    if ((size_t)rows > SIZE_MAX / (size_t)cols / element_size){
+        return NULL;
+    }
+
+	struct Matrix *new_matrix = (malloc(sizeof(struct Matrix)));
+
+	if(new_matrix == NULL){
+		return NULL;
+	}
+
+	new_matrix->type = type;
+
+	new_matrix->rows = rows;
+	new_matrix->cols = cols;
+
+	size_t total_bytes = (size_t)rows * cols * element_size;
+
+	new_matrix->matrix = malloc(total_bytes);
+
+	if(!new_matrix->matrix){
+		free(new_matrix);
+		return NULL;
+	}
+	return new_matrix;
+}
+
+// Destructor
+void matrix_destroy(struct Matrix *m) {
+    if (!m) return;
+    free(m->matrix);
+    free(m);
+}
+
+// create a matrix from 2D array
+
+struct Matrix *matrix_from_2d(int rows, int cols, enum DataType type, const void *src){
+    if (!src) return NULL;
+
+    struct Matrix *m = matrix(rows, cols, type);
+    if (!m) return NULL;
+
+    size_t elem_size = get_type_size(type);
+    size_t total_bytes = (size_t)rows * cols * elem_size;
+
+    memcpy(m->matrix, src, total_bytes);
+
+    return m;
+}
+
+//========================================================================
+// Helper Function for printing the array in right format
+
+static int digits_ll(long long x)
+{
+    int d = (x <= 0) ? 1 : 0;   // handle 0 and negative
+    while (x) {
+        x /= 10;
+        d++;
+    }
+    return d;
+}
+
+static int digits_ull(unsigned long long x)
+{
+    int d = (x == 0) ? 1 : 0;
+    while (x) {
+        x /= 10;
+        d++;
+    }
+    return d;
+}
+
+//====================================================================
+
+// Printing the array
+void print_matrix(struct Matrix *m)
+{
+    if (!m || !m->matrix) {
+        printf("[]\n");
+        return;
+    }
+
+    int rows = m->rows;
+    int cols = m->cols;
+
+    int col_width[256];   // assuming max 256 columns
+    for (int j = 0; j < cols; ++j)
+        col_width[j] = 0;
+
+    /* -------- pass 1: compute max width per column -------- */
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+
+            size_t idx = (size_t)i * cols + j;
+            int w = 1;
+
+            switch (m->type) {
+
+                case TYPE_INT8:
+                case TYPE_INT16:
+                case TYPE_INT32:
+                case TYPE_INT64: {
+                    long long v = 0;
+                    if (m->type == TYPE_INT8)   v = ((int8_t*)m->matrix)[idx];
+                    if (m->type == TYPE_INT16)  v = ((int16_t*)m->matrix)[idx];
+                    if (m->type == TYPE_INT32)  v = ((int32_t*)m->matrix)[idx];
+                    if (m->type == TYPE_INT64)  v = ((int64_t*)m->matrix)[idx];
+                    w = digits_ll(v);
+                    break;
+                }
+
+                case TYPE_UINT8:
+                case TYPE_UINT16:
+                case TYPE_UINT32:
+                case TYPE_UINT64: {
+                    unsigned long long v = 0;
+                    if (m->type == TYPE_UINT8)   v = ((uint8_t*)m->matrix)[idx];
+                    if (m->type == TYPE_UINT16)  v = ((uint16_t*)m->matrix)[idx];
+                    if (m->type == TYPE_UINT32)  v = ((uint32_t*)m->matrix)[idx];
+                    if (m->type == TYPE_UINT64)  v = ((uint64_t*)m->matrix)[idx];
+                    w = digits_ull(v);
+                    break;
+                }
+
+                case TYPE_FLOAT:
+                case TYPE_DOUBLE:
+                    w = 8;   // fixed width for floats
+                    break;
+
+                default:
+                    w = 1;
+            }
+
+            if (w > col_width[j])
+                col_width[j] = w;
+        }
+    }
+
+    /* -------- pass 2: print aligned -------- */
+    printf("[");
+
+    for (int i = 0; i < rows; ++i) {
+
+        if (i > 0)
+            printf(" ");
+
+        printf("[");
+
+        for (int j = 0; j < cols; ++j) {
+
+            size_t idx = (size_t)i * cols + j;
+            int w = col_width[j];
+
+            switch (m->type) {
+
+                case TYPE_INT8:
+                    printf("%*d", w, (int)((int8_t*)m->matrix)[idx]);
+                    break;
+
+                case TYPE_INT16:
+                    printf("%*d", w, (int)((int16_t*)m->matrix)[idx]);
+                    break;
+
+                case TYPE_INT32:
+                    printf("%*d", w, ((int32_t*)m->matrix)[idx]);
+                    break;
+
+                case TYPE_INT64:
+                    printf("%*lld", w, (long long)((int64_t*)m->matrix)[idx]);
+                    break;
+
+                case TYPE_UINT8:
+                    printf("%*u", w, (unsigned)((uint8_t*)m->matrix)[idx]);
+                    break;
+
+                case TYPE_UINT16:
+                    printf("%*u", w, (unsigned)((uint16_t*)m->matrix)[idx]);
+                    break;
+
+                case TYPE_UINT32:
+                    printf("%*u", w, ((uint32_t*)m->matrix)[idx]);
+                    break;
+
+                case TYPE_UINT64:
+                    printf("%*llu", w, (unsigned long long)((uint64_t*)m->matrix)[idx]);
+                    break;
+
+                case TYPE_FLOAT:
+                    printf("%*.*f", w, 3, ((float*)m->matrix)[idx]);
+                    break;
+
+                case TYPE_DOUBLE:
+                    printf("%*.*f", w, 6, ((double*)m->matrix)[idx]);
+                    break;
+
+                default:
+                    printf("%*s", w, "?");
+                    break;
+            }
+
+            if (j < cols - 1)
+                printf(" ");
+        }
+
+        printf("]");
+
+        if (i < rows - 1)
+            printf("\n");
+    }
+
+    printf("]\n");
+}
+
+// Datatype Selection
+
+enum DataType datatype_selection(struct Matrix *M1, struct Matrix *M2){
+	if(!M1 || !M2) return TYPE_INT32; // default datatype
+
+	size_t M1_datatype_size = get_type_size(M1->type);
+	size_t M2_datatype_size = get_type_size(M2->type);
+
+	size_t max_size = (M1_datatype_size > M2_datatype_size) ? M1_datatype_size: M2_datatype_size;
+
+	enum DataType type = get_size_type(max_size);
+
+	return type;
+
+}
+
+// Adding two Matrix
+
+// struct Matrix *add_matrix(struct Matrix *M1, struct Matrix *M2){
+// 	if(!M1 || !M1->matrix || !M2 || !M2->matrix){
+// 		return NULL;
+// 	}
+
+// 	if((M1->rows != M2->rows) || (M1->cols != M1->cols)){
+// 		return NULL;
+// 	}
+
+// 	struct Matrix *result_matrix = matrix(M1->rows, M1->cols)
+
+
+// }
