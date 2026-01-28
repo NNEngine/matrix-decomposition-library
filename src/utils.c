@@ -33,6 +33,9 @@ static size_t get_type_size(enum DataType type){
 	case TYPE_UINT64:
 		return sizeof(uint64_t);
 
+	case TYPE_INVALID:
+        return -1;
+
 	default:
 		return 0;
 
@@ -300,7 +303,7 @@ enum DataType datatype_selection(struct Matrix *M1, struct Matrix *M2)
 
     if (r1 < 0 || r2 < 0) return TYPE_INVALID;
 
-    type = (r1 >= r2) ? M1->type : M2->type;
+    enum DataType type = (r1 >= r2) ? M1->type : M2->type;
 
     return type;
 }

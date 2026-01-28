@@ -18,6 +18,8 @@ enum DataType{
 
 	TYPE_FLOAT,
 	TYPE_DOUBLE,
+
+	TYPE_INVALID,
 };
 
 struct Matrix{

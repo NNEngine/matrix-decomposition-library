@@ -37,5 +37,8 @@ int main(void){
 	struct Matrix *M2 = matrix_from_2d(3, 3, TYPE_INT32, C);
 	print_matrix(M2);
 
+	printf("\n==============Adding Two Matrices==============\n");
+	print_matrix(add_matrix(M1, M2));
+
 	return 0;
 }
