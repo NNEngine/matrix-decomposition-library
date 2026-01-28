@@ -30,7 +30,8 @@ struct Matrix{
 };
 
 static size_t get_type_size(enum DataType type);
-static enum DataType get_size_type(size_t size);
+void *type_range(enum DataType type);
+
 
 
 struct Matrix *matrix(int rows, int cols, enum DataType type);

@@ -18,7 +18,7 @@ int main(void){
 	printf("%d\n", M->rows);
 	print_matrix(M);
 
-	printf("===============================\n");
+	printf("==================================\n");
 
 	int32_t B[3][3] = {
 			{100, 200, 1},
@@ -28,6 +28,14 @@ int main(void){
 
 	struct Matrix *M1 = matrix_from_2d(3, 3, TYPE_INT32, B);
 	print_matrix(M1);
+
+	int32_t C[3][3] = {
+			{100, 200, 1},
+			{20000, 2, 90},
+			{100, 1, 90000}
+	};
+	struct Matrix *M2 = matrix_from_2d(3, 3, TYPE_INT32, C);
+	print_matrix(M2);
 
 	return 0;
 }

@@ -39,27 +39,30 @@ static size_t get_type_size(enum DataType type){
 	}
 }
 
-static enum DataType get_size_type(size_t size){
-	/* get datatype from the size*/
+//rank based approch
+static int type_rank(enum DataType t)
+{
+    switch (t) {
 
-	switch(size){
-		case sizeof(int8_t): return TYPE_INT8;
-		case sizeof(int16_t): return TYPE_INT16;
-		case sizeof(int32_t): return TYPE_INT32;
-		case sizeof(int64_t): return TYPE_INT64;
+        case TYPE_DOUBLE: return 100;
+        case TYPE_FLOAT:  return 90;
 
-		case sizeof(uint8_t) : return TYPE_UINT8;
-		case sizeof(uint16_t) : return TYPE_UINT16;
-		case sizeof(uint32_t) : return TYPE_UINT32;
-		case sizeof(uint64_t) : return TYPE_UINT64;
+        case TYPE_UINT64:
+        case TYPE_INT64:  return 80;
 
-		case sizeof(float): return TYPE_FLOAT;
-		case sizeof(double): return TYPE_DOUBLE;
+        case TYPE_UINT32:
+        case TYPE_INT32:  return 70;
 
-		default: return -1; // unknown datatype
+        case TYPE_UINT16:
+        case TYPE_INT16:  return 60;
 
-	}
+        case TYPE_UINT8:
+        case TYPE_INT8:   return 50;
+
+        default: return -1;
+    }
 }
+
 
 struct Matrix *matrix(int rows, int cols, enum DataType type){
 	if(rows <=0 || cols <= 0){
@@ -288,32 +291,83 @@ void print_matrix(struct Matrix *m)
 
 // Datatype Selection
 
-enum DataType datatype_selection(struct Matrix *M1, struct Matrix *M2){
-	if(!M1 || !M2) return TYPE_INT32; // default datatype
+enum DataType datatype_selection(struct Matrix *M1, struct Matrix *M2)
+{
+    if (!M1 || !M2) return TYPE_INVALID;
 
-	size_t M1_datatype_size = get_type_size(M1->type);
-	size_t M2_datatype_size = get_type_size(M2->type);
+    int r1 = type_rank(M1->type);
+    int r2 = type_rank(M2->type);
 
-	size_t max_size = (M1_datatype_size > M2_datatype_size) ? M1_datatype_size: M2_datatype_size;
+    if (r1 < 0 || r2 < 0) return TYPE_INVALID;
 
-	enum DataType type = get_size_type(max_size);
+    type = (r1 >= r2) ? M1->type : M2->type;
 
-	return type;
-
+    return type;
 }
+
 
 // Adding two Matrix
 
-// struct Matrix *add_matrix(struct Matrix *M1, struct Matrix *M2){
-// 	if(!M1 || !M1->matrix || !M2 || !M2->matrix){
-// 		return NULL;
-// 	}
+struct Matrix *add_matrix(struct Matrix *M1, struct Matrix *M2)
+{
+    if (!M1 || !M2 || !M1->matrix || !M2->matrix)
+        return NULL;
 
-// 	if((M1->rows != M2->rows) || (M1->cols != M1->cols)){
-// 		return NULL;
-// 	}
+    if (M1->rows != M2->rows || M1->cols != M2->cols)
+        return NULL;
 
-// 	struct Matrix *result_matrix = matrix(M1->rows, M1->cols)
+    enum DataType out_type = datatype_selection(M1, M2);
+    if (out_type == TYPE_INVALID)
+        return NULL;
 
+    int rows = M1->rows;
+    int cols = M1->cols;
+    size_t total = (size_t)rows * cols;
 
-// }
+    struct Matrix *R = matrix(rows, cols, out_type);
+    if (!R) return NULL;
+
+    for (size_t i = 0; i < total; ++i) {
+
+        double a = 0.0;
+        double b = 0.0;
+
+        /* ---- load M1 value into double ---- */
+        switch (M1->type) {
+            case TYPE_INT32:  a = ((int32_t*)M1->matrix)[i]; break;
+            case TYPE_FLOAT:  a = ((float*)M1->matrix)[i];   break;
+            case TYPE_DOUBLE: a = ((double*)M1->matrix)[i];  break;
+            default: return NULL;
+        }
+
+        /* ---- load M2 value into double ---- */
+        switch (M2->type) {
+            case TYPE_INT32:  b = ((int32_t*)M2->matrix)[i]; break;
+            case TYPE_FLOAT:  b = ((float*)M2->matrix)[i];   break;
+            case TYPE_DOUBLE: b = ((double*)M2->matrix)[i];  break;
+            default: return NULL;
+        }
+
+        double sum = a + b;
+
+        /* ---- store into result ---- */
+        switch (out_type) {
+            case TYPE_INT32:
+                ((int32_t*)R->matrix)[i] = (int32_t)sum;
+                break;
+
+            case TYPE_FLOAT:
+                ((float*)R->matrix)[i] = (float)sum;
+                break;
+
+            case TYPE_DOUBLE:
+                ((double*)R->matrix)[i] = sum;
+                break;
+
+            default:
+                return NULL;
+        }
+    }
+
+    return R;
+}
